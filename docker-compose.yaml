@@ -1,0 +1,6 @@
+version: '3.7'
+services:
+  face-detection:
+    image: hosnahoseini/simple-face-ditection
+    ports:
+    - 8001:8001

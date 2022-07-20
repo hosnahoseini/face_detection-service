@@ -2,15 +2,13 @@ import sys
 
 import cv2
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
+import numpy as np
 
 app = FastAPI()
 
 
-@app.get("/predict/{imagePath:path}")
-async def predict(imagePath:str):
-
-    image = cv2.imread(imagePath)
+def detect(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -30,6 +28,17 @@ async def predict(imagePath:str):
     status = cv2.imwrite('faces_detected.jpg', image)
     return(faces.tolist())
 
+@app.get("/path/{imagePath:path}")
+async def detect_with_path(imagePath):
+    image = cv2.imread(imagePath)
+    return detect(image)
+    
+@app.post("/image/")
+async def detect_with_file(file: UploadFile = File(...)):
+    contents = await file.read()
+    nparr = np.fromstring(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    return detect(img)
 
 # python main.py
 if __name__ == '__main__':
