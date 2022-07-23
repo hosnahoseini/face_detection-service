@@ -22,17 +22,17 @@ def detect(image):
         minSize=(30, 30)
     )
 
-
     for (x, y, w, h) in faces:
         cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
         roi_color = image[y:y + h, x:x + w]
         # cv2.imwrite(str(w) + str(h) + '_faces.png', roi_color)
     
-    status = cv2.imwrite(PATH + 'faces_detected.png', image)
+    status = cv2.imwrite(PATH + 'output/faces_detected.png', image)
     return(faces.tolist())
 
 @app.get("/path/{imagePath:path}")
 async def detect_with_path(imagePath):
+    imagePath = PATH + imagePath
     image = cv2.imread(imagePath)
     return detect(image)
     
@@ -46,7 +46,7 @@ async def detect_with_file(file: UploadFile = File(...)):
 @app.get("/last_output/")
 async def image_endpoint():
     # Returns a cv2 image array from the document vector
-    cv2img = cv2.imread(PATH + "faces_detected.png")
+    cv2img = cv2.imread(PATH + "output/faces_detected.png")
     res, im_png = cv2.imencode(".png", cv2img)
     return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
 

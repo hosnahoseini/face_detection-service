@@ -7,7 +7,6 @@ COPY requirements.txt /home/app/requirements.txt
 RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6  -y
 
-
 RUN pip install -r /home/app/requirements.txt
 
 EXPOSE 8001
