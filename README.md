@@ -11,7 +11,7 @@ Pushed to docker hub and you can easily pull it from docker hub and enjoy!
 
 2. then open `http://0.0.0.0:8001/docs#/` in your browser
 
-3. choose file in /image/ or by entre image path in /path/{imagePath:path} API and see the last result in /last_output/ 
+3. choose file in /image/ or put your image on input folder and enter image relative path (input/filename) in /path/{imagePath:path} API and see the last result in /last_output/ 
 (you can use images in test folder to test)
 
 ## What did we use?
