@@ -1,6 +1,8 @@
 version: '3.7'
 services:
   face-detection:
-    image: hosnahoseini/simple-face-ditection
+    image: simple-face-detection:2.1
     ports:
     - 8001:8001
+    volumes:
+    - "./src:/home/app" 
