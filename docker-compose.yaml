@@ -1,26 +1,28 @@
-version: '3.7'
+
+version: '3.8'
+
 services:
-
-  face-detection:
-    image: simple-face-detection:2.1
-    ports:
-    - 8001:8001
+  web:
+    build: .
+    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn src.main:app --host 0.0.0.0'
     volumes:
-    - "./src:/home/app" 
-    
-  mongo:
-    image: mongo
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-
-  mongo-express:
-    image: mongo-express
-    restart: always
+      - .:/app
     ports:
-      - 8081:8081
+      - 8008:8000
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      - DATABASE_URL=postgresql://fastapi_traefik:fastapi_traefik@db:5432/postgres
+    depends_on:
+      - db
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USER=fastapi_traefik
+      - POSTGRES_PASSWORD=fastapi_traefik
+      - POSTGRES_DB=postgres
+
+volumes:
+  postgres_data:

@@ -1,4 +1,9 @@
-fastapi>=0.68.0,<=0.79.0
+asyncpg==0.22.0
+fastapi==0.63.0
+ormar==0.10.5
+psycopg2-binary==2.8.6
+uvicorn==0.13.4
+fastapi-sqlalchemy
 opencv-python==4.6.0.66
-uvicorn>=0.15.0,<=0.18.2
 python-multipart==0.0.5
+# psycopg2
