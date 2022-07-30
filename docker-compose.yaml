@@ -2,7 +2,7 @@
 version: '3.8'
 
 services:
-  web:
+  face-detection:
     build: .
     command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn src.main:app --host 0.0.0.0'
     volumes:
@@ -10,7 +10,7 @@ services:
     ports:
       - 8008:8000
     environment:
-      - DATABASE_URL=postgresql://fastapi_traefik:fastapi_traefik@db:5432/postgres
+      - DATABASE_URL=postgresql://fastapi_traefik:password@db:5432/postgres
     depends_on:
       - db
   db:
@@ -21,7 +21,7 @@ services:
       - 5432
     environment:
       - POSTGRES_USER=fastapi_traefik
-      - POSTGRES_PASSWORD=fastapi_traefik
+      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=postgres
 
 volumes:

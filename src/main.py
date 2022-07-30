@@ -25,6 +25,7 @@ app.add_middleware(
 )
 
 def detect(image, name):
+    # insert_image_to_db(name)
     gray = cv2.cvtColor(image , cv2.COLOR_BGR2GRAY)
 
     faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -43,6 +44,11 @@ def detect(image, name):
     cv2.imwrite(add, image)
 
     return(faces.tolist())
+
+async def insert_image_to_db(file_name):
+    addr = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
+    query = images.insert().values(name=file_name, address=addr, date=datetime.now())
+    last_record_id = await database.execute(query)
 
 @app.on_event("startup")
 async def startup():
@@ -80,27 +86,36 @@ async def delete_image(image_id: int):
     await database.execute(query)
     return {"message": "Image with id: {} deleted successfully!".format(image_id)}
 
-@app.get("/detect_with_path/{imagePath:path}")
-async def detect_with_path(imagePath):
-    imagePath = PATH + imagePath
-    image = cv2.imread(imagePath)
-    return detect(image, imagePath.strip("/")[-1].strip(".")[0])
+@app.get("/detect_with_path/{image_path:path}")
+async def detect_with_path(image_path):
+    image_path = PATH + '/' + image_path
+    file_name = image_path.strip("/")[-1].strip(".")[0]
+    image = cv2.imread(image_path)
+    
+    add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
+    query = images.insert().values(name=file_name, address=add, date=datetime.now())
+    last_record_id = await database.execute(query)
+
+    return detect(image, file_name)
+
     
 @app.post("/detect_with_image/")
 async def detect_with_file(file: UploadFile = File(...)):
     contents = await file.read()
     nparr = np.fromstring(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    add = PATH + f'/resources/output/{file.filename.split(".")[0]}_output.png'
+    insert_image_to_db(file.filename)
 
+    add = PATH + f'/resources/output/{file.filename.split(".")[0]}_output.png'
     query = images.insert().values(name=file.filename, address=add, date=datetime.now())
     last_record_id = await database.execute(query)
+
     return detect(img, file.filename)
 
-@app.get("/result/{image_name:str}")
-async def get_result(image_name):
+@app.get("/result/{image_id:int}")
+async def get_result(image_id: int):
     # Returns a cv2 image array from the document vector
-    query = images.select().where(images.c.name == image_name)
+    query = images.select().where(images.c.id == image_id)
     res = await database.fetch_one(query)
     add = res["address"]
     cv2img = cv2.imread(add)
