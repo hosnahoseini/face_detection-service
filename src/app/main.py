@@ -4,18 +4,19 @@ from time import sleep
 from typing import List
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from .db import database
-from .schema import Image, ImageIn
-from .db import images, images
+from src.db.db import database
+from src.db.schema import Image, ImageIn
+from src.db.db import images, images
 import cv2
 from fastapi import FastAPI, File, UploadFile
 import io
 import numpy as np
 from starlette.responses import StreamingResponse
 from datetime import datetime
+import os
 
 PATH = "/app"
-app = FastAPI(title = "REST API using FastAPI PostgreSQL Async EndPoints")
+app = FastAPI(title = "Face Detection")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -76,12 +77,17 @@ async def create_image(image: ImageIn):
 
 @app.put("/images/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
 async def update_image(image_id: int, payload: ImageIn):
-    query = images.update().where(images.c.id == image_id).values(name=payload.name, address=payload.address, date=datetime.now())
+    query = images.update().where(images.c.id == image_id).values(name=payload.name, address=payload.address, date=payload)
     await database.execute(query)
     return {**payload.dict(), "id": image_id}
 
 @app.delete("/images/{image_id}/", status_code = status.HTTP_200_OK)
 async def delete_image(image_id: int):
+    query = images.select().where(images.c.id == image_id)
+    res = await database.fetch_one(query)
+    add = res["address"]
+    os.remove(add)
+
     query = images.delete().where(images.c.id == image_id)
     await database.execute(query)
     return {"message": "Image with id: {} deleted successfully!".format(image_id)}

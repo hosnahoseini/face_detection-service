@@ -3,8 +3,12 @@ version: '3.8'
 
 services:
   face-detection:
-    build: .
-    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn src.main:app --host 0.0.0.0'
+    env_file:
+      - .env
+    build: 
+      context: ../src/app
+      dockerfile: Dockerfile
+    command: bash -c 'sleep 20; uvicorn --app-dir=.. app.main:app --host 0.0.0.0'
     volumes:
       - .:/app
     ports:
@@ -14,15 +18,16 @@ services:
     depends_on:
       - db
   db:
+    env_file:
+      - .env
+    build:
+      context: ../src/db
+      dockerfile: Dockerfile
     image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     expose:
       - 5432
-    environment:
-      - POSTGRES_USER=fastapi_traefik
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=postgres
 
 volumes:
   postgres_data:
