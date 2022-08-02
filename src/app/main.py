@@ -14,6 +14,7 @@ import numpy as np
 from starlette.responses import StreamingResponse
 from datetime import datetime
 import os
+import uvicorn
 
 PATH = "/app"
 app = FastAPI(title = "Face Detection")
@@ -127,3 +128,6 @@ async def get_result(image_id: int):
     cv2img = cv2.imread(add)
     res, im_png = cv2.imencode(".png", cv2img)
     return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
+
+if __name__ == '__main__':
+    uvicorn.run("src.app.main:app",host='0.0.0.0', port=8000, reload=True, debug=True)
