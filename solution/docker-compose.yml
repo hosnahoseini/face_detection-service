@@ -1,0 +1,46 @@
+
+version: '3.8'
+
+services:
+  face-detection:
+    env_file:
+      - .env
+    # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done;'
+    
+    build: 
+      context: ../src/app
+      dockerfile: Dockerfile
+    command: bash -c 'sleep 1; python ./src/app/main.py'
+    volumes:
+      - ..:/app
+    ports:
+      - 8008:8000
+    environment:
+      - DATABASE_URL=postgresql://root:root@db:5432/test_db
+    depends_on:
+      - db 
+    #   db:
+    #     condition: service_healthy
+    # links:
+    #   - db
+
+  db:
+    env_file:
+      - .env
+    build: 
+      context: ../src/db
+      dockerfile: Dockerfile
+    container_name: pg_container
+    image: postgres
+    restart: always
+    # healthcheck:
+    #   test: ["CMD-SHELL", "-q", "pg_isready -U root", "-d", "test_db"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+volumes:
+  db:
