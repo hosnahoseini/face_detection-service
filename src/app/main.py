@@ -27,9 +27,10 @@ app.add_middleware(
 )
 
 def detect(image, name):
-    # insert_image_to_db(name)
+    # convert image to grayscale
     gray = cv2.cvtColor(image , cv2.COLOR_BGR2GRAY)
 
+    # create the cascade and initialize it with our face cascade. This loads the face cascade into memory
     faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
     faces = faceCascade.detectMultiScale(
         gray,
@@ -38,12 +39,13 @@ def detect(image, name):
         minSize=(30, 30)
     )
 
+    # Draw a rectangle around the faces
     for (x, y, w, h) in faces:
-        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        roi_color = image[y:y + h, x:x + w]
-        # cv2.imwrite(str(w) + str(h) + '_faces.png', roi_color)
-    add = PATH + f'/resources/output/{name.split(".")[0]}_output.png'
-    cv2.imwrite(add, image)
+        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 5)
+
+    # save result    
+    address = PATH + f'/resources/output/{name.split(".")[0]}_output.png'
+    cv2.imwrite(address, image)
 
     return(faces.tolist())
 
@@ -67,7 +69,10 @@ async def read_images(skip: int = 0, take: int = 20):
 
 @app.get("/images/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
 async def read_images(image_id: int):
+    
     query = images.select().where(images.c.id == image_id)
+    if query is None:
+        raise DataError
     return await database.fetch_one(query)
 
 @app.post("/images/", response_model=Image, status_code = status.HTTP_201_CREATED)
@@ -87,7 +92,7 @@ async def delete_image(image_id: int):
     query = images.select().where(images.c.id == image_id)
     res = await database.fetch_one(query)
     add = res["address"]
-    os.remove(add)
+    # os.remove(add)
 
     query = images.delete().where(images.c.id == image_id)
     await database.execute(query)
@@ -130,4 +135,4 @@ async def get_result(image_id: int):
     return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
 
 if __name__ == '__main__':
-    uvicorn.run("src.app.main:app",host='0.0.0.0', port=8000, reload=True, debug=True)
+    uvicorn.run("src.app.main:app",host='0.0.0.0', port=5000, reload=True, debug=True)
