@@ -17,6 +17,10 @@ services:
     scale: 1
     environment:
       - DATABASE_URL=postgresql://root:root@db:5432/test_db
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=test_db
+      - PYTHONPATH=/app
     depends_on:
       - db 
 
@@ -33,6 +37,11 @@ services:
       - "5432:5432"
     volumes:
       - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=test_db
+      - PYTHONPATH=/app
 
   nginx:
     image: nginx:latest
