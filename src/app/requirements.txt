@@ -6,3 +6,5 @@ uvicorn==0.13.4
 fastapi-sqlalchemy
 opencv-python==4.6.0.66
 python-multipart==0.0.5
+pytest
+requests

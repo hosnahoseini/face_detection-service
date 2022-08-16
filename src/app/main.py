@@ -1,23 +1,25 @@
 
-from email.headerregistry import Address
-from time import sleep
-from typing import List
-from fastapi import FastAPI, status
-from fastapi.middleware.cors import CORSMiddleware
-from src.db.db import database
-from src.db.schema import Image, ImageIn
-from src.db.db import images, images
-import cv2
-from fastapi import FastAPI, File, UploadFile
+import imghdr
 import io
-import numpy as np
-from starlette.responses import StreamingResponse
-from datetime import datetime
 import os
+from datetime import datetime
+from os import path
+from typing import List
+from src.app.api import ping
+
+import cv2
+import numpy as np
 import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from src.db.db import database, images
+from src.db.schema import Image, ImageIn
+from starlette.responses import StreamingResponse
 
 PATH = "/app"
 app = FastAPI(title = "Face Detection")
+app.include_router(ping.router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,32 +69,52 @@ async def read_images(skip: int = 0, take: int = 20):
     query = images.select().offset(skip).limit(take)
     return await database.fetch_all(query)
 
-@app.get("/images/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
-async def read_images(image_id: int):
+@router.get("/ping")
+async def ping():
+    return {"output": "pong"}
+
+@app.get("/image/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
+async def read_image(image_id: int):
     
     query = images.select().where(images.c.id == image_id)
-    if query is None:
-        raise DataError
-    return await database.fetch_one(query)
+    res = await database.fetch_one(query)
 
-@app.post("/images/", response_model=Image, status_code = status.HTTP_201_CREATED)
+    # validate input
+    if (not res):
+        raise HTTPException(404, detail="The requested resource was not found.")
+
+    return res
+
+@app.post("/image/", response_model=Image, status_code = status.HTTP_201_CREATED)
 async def create_image(image: ImageIn):
     query = images.insert().values(name=image.name, address=image.address, date=datetime.now())
     last_record_id = await database.execute(query)
     return {**image.dict(), "id": last_record_id}
 
-@app.put("/images/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
+@app.put("/image/{image_id}/", response_model=Image, status_code = status.HTTP_200_OK)
 async def update_image(image_id: int, payload: ImageIn):
     query = images.update().where(images.c.id == image_id).values(name=payload.name, address=payload.address, date=payload)
-    await database.execute(query)
+    res = await database.execute(query)
+
+    # validate input
+    if (not res):
+        raise HTTPException(404, detail="The requested resource was not found.")
+    
     return {**payload.dict(), "id": image_id}
 
-@app.delete("/images/{image_id}/", status_code = status.HTTP_200_OK)
+@app.delete("/image/{image_id}/", status_code = status.HTTP_200_OK)
 async def delete_image(image_id: int):
     query = images.select().where(images.c.id == image_id)
     res = await database.fetch_one(query)
+
+    # validate input
+    if (not res):
+        raise HTTPException(404, detail="The requested resource was not found.")
+
+
+    # remove imaage
     add = res["address"]
-    # os.remove(add)
+    os.remove(add)
 
     query = images.delete().where(images.c.id == image_id)
     await database.execute(query)
@@ -101,18 +123,32 @@ async def delete_image(image_id: int):
 @app.get("/detect_with_path/{image_path:path}")
 async def detect_with_path(image_path):
     image_path = PATH + '/' + image_path
+    
+    # validate input 
+    if (not path.exists(image_path)):
+        raise HTTPException(400, detail="Invalid path")
+
+    image_types=['rgb','gif', 'pbm', 'pgm', 'ppm', 'tiff', 'rast', 'xbm', 'jpeg', 'bmp', 'png', 'webp', 'exr']
+    if(imghdr.what(image_path) not in image_types):
+        raise HTTPException(400, detail="Invalid document type")
+        
     file_name = image_path.strip("/")[-1].strip(".")[0]
     image = cv2.imread(image_path)
-    
+
     add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
     query = images.insert().values(name=file_name, address=add, date=datetime.now())
     last_record_id = await database.execute(query)
 
     return detect(image, file_name)
-
     
 @app.post("/detect_with_image/")
 async def detect_with_file(file: UploadFile = File(...)):
+
+    # validate input
+    image_types = ["image/apng", "image/webp", "image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml"]
+    if file.content_type not in image_types:
+        raise HTTPException(400, detail="Invalid document type")
+        
     contents = await file.read()
     nparr = np.fromstring(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -129,6 +165,11 @@ async def get_result(image_id: int):
     # Returns a cv2 image array from the document vector
     query = images.select().where(images.c.id == image_id)
     res = await database.fetch_one(query)
+
+    # validate input
+    if (not res):
+        raise HTTPException(404, detail="The requested resource was not found.")
+
     add = res["address"]
     cv2img = cv2.imread(add)
     res, im_png = cv2.imencode(".png", cv2img)

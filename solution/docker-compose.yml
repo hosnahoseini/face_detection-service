@@ -14,7 +14,7 @@ services:
       - ..:/app
     expose:
       - "5000"
-    scale: 3
+    scale: 1
     environment:
       - DATABASE_URL=postgresql://root:root@db:5432/test_db
     depends_on:
