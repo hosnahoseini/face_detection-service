@@ -31,7 +31,7 @@ services:
       context: ../src/db
       dockerfile: Dockerfile
     container_name: pg_container
-    image: postgres
+    image: postgres:14
     restart: always
     ports:
       - "5432:5432"
