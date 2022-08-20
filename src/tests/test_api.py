@@ -161,7 +161,7 @@ def test_detect_address(test_app, monkeypatch):
                     ]
                     ]
         assert response.status_code == 200
-        assert toset(response.json()) == toset(expected)
+        assert to_set(response.json()) == to_set(expected)
 
 
 def test_detect_image_file(monkeypatch):
@@ -202,9 +202,26 @@ def test_detect_image_file(monkeypatch):
                     ]
                 ]
 
-        assert toset(response.json()) == toset(expected)
+        assert to_set(response.json()) == to_set(expected)
 
-def toset(myList):
+def test_result_array(monkeypatch):
+    with TestClient(app) as client:
+
+        async def mock_get(payload):
+            return {
+                    "id": 2,
+                    "name": "t2.jpeg",
+                    "address": "/app/resources/output/t2_output.png",
+                    "date": "2022-08-20",
+                    "result": "[[1194, 264, 75, 75], [840, 270, 71, 71], [232, 310, 72, 72], [1011, 221, 73, 73], [392, 284, 80, 80], [1382, 278, 77, 77], [560, 219, 101, 101], [820, 496, 151, 151]]"
+                }
+
+        monkeypatch.setattr(crud, "get", mock_get)  
+        response = client.get("/array_result/2")
+        assert response.status_code == 200
+        assert response.json() == "[[1194, 264, 75, 75], [840, 270, 71, 71], [232, 310, 72, 72], [1011, 221, 73, 73], [392, 284, 80, 80], [1382, 278, 77, 77], [560, 219, 101, 101], [820, 496, 151, 151]]"
+
+def to_set(myList):
     mySet = set()                   
     for list in myList:             
         for item in list:          
