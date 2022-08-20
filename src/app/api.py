@@ -53,7 +53,7 @@ def detect(image, name):
 async def insert_image_to_db(file_name):
     addr = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
     query = images.insert().values(name=file_name, address=addr, date=datetime.now())
-    last_record_id = await database.execute(query)
+    await database.execute(query)
 
    
 @router.post("/detect_with_image/")
@@ -61,17 +61,18 @@ async def detect_with_file(file: UploadFile = File(...)):
 
     # validate input
     image_types = ["image/apng", "image/webp", "image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml"]
-    if file.content_type not in image_types:
+    if type(file) == File and file.content_type not in image_types:
         raise HTTPException(400, detail="Invalid document type")
+
         
     contents = await file.read()
     nparr = np.fromstring(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    insert_image_to_db(file.filename)
 
     add = PATH + f'/resources/output/{file.filename.split(".")[0]}_output.png'
-    query = images.insert().values(name=file.filename, address=add, date=datetime.now())
-    last_record_id = await database.execute(query)
+    payload = ImageIn(name=file.filename, address=add, date=datetime.now())
+    await crud.post(payload)
+
 
     return detect(img, file.filename)
 
@@ -106,18 +107,17 @@ async def detect_with_path(image_path):
     image = cv2.imread(image_path)
 
     add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
-    query = images.insert().values(name=file_name, address=add, date=datetime.now())
-    last_record_id = await database.execute(query)
-
+    payload = ImageIn(name=file_name, address=add, date=datetime.now())
+    await crud.post(payload)
     return detect(image, file_name)
 
 
 @router.post("/image/", response_model=Image, status_code=201)
 async def create_image(payload: ImageIn):
-    image_id = await crud.post(payload)
+    image = await crud.post(payload)
 
     response_object = {
-        "id": image_id,
+        "id": image["id"],
         "name": payload.name,
         "address": payload.address,
         "date": payload.date
