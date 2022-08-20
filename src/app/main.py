@@ -12,7 +12,7 @@ import numpy as np
 import uvicorn
 from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from src.db.db import database, images
+from src.db.db import database, image_table
 from src.db.schema import Image, ImageIn
 from starlette.responses import StreamingResponse
 from src.app import api
@@ -37,7 +37,7 @@ async def startup():
 async def shutdown():
     await database.disconnect()
 
-app.include_router(api.router, tags=["image"])
+app.include_router(api.router, tags=["face detection"])
 
 if __name__ == '__main__':
     uvicorn.run("src.app.main:app",host='0.0.0.0', port=5000, reload=True, debug=True)

@@ -1,3 +1,4 @@
+from unittest import result
 from fastapi import APIRouter, HTTPException, status
 
 import imghdr
@@ -19,7 +20,7 @@ import numpy as np
 import uvicorn
 from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from src.db.db import database, images
+from src.db.db import database, image_table
 from src.db.schema import Image, ImageIn
 from starlette.responses import StreamingResponse
 from src.app import api
@@ -50,12 +51,6 @@ def detect(image, name):
 
     return(faces.tolist())
 
-async def insert_image_to_db(file_name):
-    addr = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
-    query = images.insert().values(name=file_name, address=addr, date=datetime.now())
-    await database.execute(query)
-
-   
 @router.post("/detect_with_image/")
 async def detect_with_file(file: UploadFile = File(...)):
 
@@ -70,28 +65,43 @@ async def detect_with_file(file: UploadFile = File(...)):
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     add = PATH + f'/resources/output/{file.filename.split(".")[0]}_output.png'
-    payload = ImageIn(name=file.filename, address=add, date=datetime.now())
+    faces = detect(img, file.filename)
+
+    payload = ImageIn(name=file.filename, address=add, date=datetime.now(), result=str(faces))
     await crud.post(payload)
 
+    return faces
 
-    return detect(img, file.filename)
-
-@router.get("/result/{image_id:int}")
-async def get_result(image_id: int):
+@router.get("/image_result/{id:int}")
+async def get_result(id: int):
     # Returns a cv2 image array from the document vector
-    query = images.select().where(images.c.id == image_id)
-    res = await database.fetch_one(query)
+    result = await crud.get(id)
 
     # validate input
-    if (not res):
+    if (not result):
         raise HTTPException(404, detail="The requested resource was not found.")
 
-    add = res["address"]
+    add = result["address"]
     cv2img = cv2.imread(add)
     res, im_png = cv2.imencode(".png", cv2img)
     return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
-    
+
+@router.get("/array_result/{id:int}")
+async def get_result(id: int):
+    # Returns a cv2 image array from the document vector
+    result = await crud.get(id)
+
+    # validate input
+    if (not result):
+        raise HTTPException(404, detail="The requested resource was not found.")
+
+    add = result["address"]
+    cv2img = cv2.imread(add)
+    res, im_png = cv2.imencode(".png", cv2img)
+    return result["result"]
+
 @router.get("/detect_with_path/{image_path:path}")
+
 async def detect_with_path(image_path):
     image_path = PATH + '/' + image_path
     
@@ -107,20 +117,22 @@ async def detect_with_path(image_path):
     image = cv2.imread(image_path)
 
     add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
-    payload = ImageIn(name=file_name, address=add, date=datetime.now())
-    await crud.post(payload)
-    return detect(image, file_name)
+    faces = detect(image, file_name)
 
+    payload = ImageIn(name=file_name, address=add, date=datetime.now(), result=str(faces))
+    await crud.post(payload)
+    return faces
 
 @router.post("/image/", response_model=Image, status_code=201)
 async def create_image(payload: ImageIn):
-    image = await crud.post(payload)
+    id = await crud.post(payload)
 
     response_object = {
-        "id": image["id"],
+        "id": id,
         "name": payload.name,
         "address": payload.address,
-        "date": payload.date
+        "date": payload.date,
+        "result": payload.result
     }
     return response_object
 
@@ -148,7 +160,8 @@ async def update_image(id: int, payload: ImageIn):
         "id": image_id,
         "name": payload.name,
         "address": payload.address,
-        "date": payload.date
+        "date": payload.date,
+        "result": payload.result,
     }
     return response_object
 

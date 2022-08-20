@@ -1,29 +1,31 @@
+from unittest import result
 from src.db.schema import ImageIn, Image
-from src.db.db import images, database
+from src.db.db import image_table, database
 
 async def get(id: int):
-    query = images.select().where(images.c.id == id)
+    query = image_table.select().where(image_table.c.id == id)
     res = await database.fetch_one(query)
     return res
 
 async def post(payload: ImageIn):
-    query = images.insert().values(name=payload.name, address=payload.address, date=payload.date)
-    return await database.execute(query=query)
+    query = image_table.insert().values(name=payload.name, address=payload.address, date=payload.date, result=payload.result)
+    res = await database.execute(query=query)
+    return res
 
 async def get_all():
-    query = images.select()
+    query = image_table.select()
     return await database.fetch_all(query=query)
 
 async def put(id: int, payload: ImageIn):
     query = (
-        images
+        image_table
         .update()
-        .where(id == images.c.id)
-        .values(name=payload.name, address=payload.address, date=payload.date)
-        .returning(images.c.id)
+        .where(id == image_table.c.id)
+        .values(name=payload.name, address=payload.address, date=payload.date, result=payload.result)
+        .returning(image_table.c.id)
     )
     return await database.execute(query=query)
 
 async def delete(id: int):
-    query = images.delete().where(id == images.c.id)
+    query = image_table.delete().where(id == image_table.c.id)
     return await database.execute(query=query)
