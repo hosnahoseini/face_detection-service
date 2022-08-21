@@ -164,3 +164,8 @@ async def delete_image(id: int):
     await crud.delete(id)
 
     return image
+
+@router.get("/count_word/{text}")
+def read_main(text: str):
+    return len(text.split(" "))
+    

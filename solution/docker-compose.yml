@@ -1,5 +1,5 @@
 
-version: '3.8'
+version: '3.3'
 
 services:
   face-detection:
@@ -12,15 +12,13 @@ services:
     command: bash -c 'sleep 1; python ./src/app/main.py'
     volumes:
       - ..:/app
-    expose:
-      - "5000"
-    scale: 1
-    environment:
-      - DATABASE_URL=postgresql://root:root@db:5432/test_db
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=test_db
-      - PYTHONPATH=/app
+    ports:
+    - "5000:5000"
+    # scale: 2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.face-detection.rule=Host(`0.0.0.0`)"
+      - "traefik.port=5000"
     depends_on:
       - db 
 
@@ -43,26 +41,39 @@ services:
       - POSTGRES_DB=test_db
       - PYTHONPATH=/app
 
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - face-detection
-    ports:
-      - "4000:4000"
+  # nginx:
+  #   image: nginx:latest
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - face-detection
+  #   ports:
+  #     - "4000:4000"
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin4_container
-    restart: always
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: pgadmin4_container
+  #   restart: always
+  #   ports:
+  #     - "5050:80"
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   volumes:
+  #     - pgadmin-data:/var/lib/pgadmin
+    
+  reverse-proxy:
+    image: traefik
+    command: 
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--configFile=traefik.toml"
     ports:
-      - "5050:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: raj@nola.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      - "8080:80"
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 volumes:
   db:
   pgadmin-data:

@@ -10,7 +10,7 @@ from typing import List
 import cv2
 import numpy as np
 import uvicorn
-from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from src.db.db import database, image_table
 from src.db.schema import Image, ImageIn
@@ -37,7 +37,14 @@ async def startup():
 async def shutdown():
     await database.disconnect()
 
+@app.get("/")
+def read_main(request: Request):
+    return {"message": "Hello World", "root_path": request.scope.get("root_path")}
+    
 app.include_router(api.router, tags=["face detection"])
+
+
 
 if __name__ == '__main__':
     uvicorn.run("src.app.main:app",host='0.0.0.0', port=5000, reload=True, debug=True)
+    uvicorn.run("src.app.main:app1",host='0.0.0.0', port=5000, reload=True, debug=True)
