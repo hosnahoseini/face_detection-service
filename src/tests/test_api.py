@@ -263,8 +263,36 @@ def test_detect_invalid_address(test_app, monkeypatch):
 
 def test_detect_address_invalid_type(test_app, monkeypatch):
     with TestClient(app) as client:  
-        response = client.get("/detect_with_path/%2Fresources%2Finput%2Finvalid.py")
+        response = client.get("/detect_with_path/%2Fresources%2Finput%2Fvideo.png")
 
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Invalid document type"
+
+def test_detect_image_file_invalid_type(monkeypatch):
+    with TestClient(app) as client:
+
+        async def mock_post(payload):
+            return None
+
+        monkeypatch.setattr(crud, "post", mock_post)  
+
+        files = {'file': open("/app/resources/input/video.mp4",'rb')}
+        response = client.post("/detect_with_image/", files=files)
+        
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Invalid document type"
+
+def test_detect_image_file_invalid_type_valid_extension(monkeypatch):
+    with TestClient(app) as client:
+
+        async def mock_post(payload):
+            return None
+
+        monkeypatch.setattr(crud, "post", mock_post)  
+
+        files = {'file': open("/app/resources/input/video.png",'rb')}
+        response = client.post("/detect_with_image/", files=files)
+        
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid document type"
 

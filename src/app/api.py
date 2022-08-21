@@ -1,32 +1,21 @@
-from unittest import result
-from fastapi import APIRouter, HTTPException, status
-
 import imghdr
 import io
-import os
 from datetime import datetime
 from os import path
 from typing import List
 
-
 import cv2
+import magic
 import numpy as np
 import uvicorn
-from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from src.app import crud
 from src.db.schema import Image, ImageIn
-import cv2
-import numpy as np
-import uvicorn
-from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
-from src.db.db import database, image_table
-from src.db.schema import Image, ImageIn
 from starlette.responses import StreamingResponse
-from src.app import api
 
 router = APIRouter()
 PATH = "/app"
+image_types = ["image/apng", "image/webp", "image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml"]
 
 def detect(image, name):
     # convert image to grayscale
@@ -55,8 +44,9 @@ def detect(image, name):
 async def detect_with_file(file: UploadFile = File(...)):
 
     # validate input
-    image_types = ["image/apng", "image/webp", "image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml"]
-    if type(file) == File and file.content_type not in image_types:
+    file_type = magic.from_buffer(file.file.read(), mime=True)
+    file.file.seek(0)
+    if file_type not in image_types:
         raise HTTPException(400, detail="Invalid document type")
 
         
@@ -104,13 +94,13 @@ async def get_result(id: int):
 
 async def detect_with_path(image_path):
     image_path = PATH + '/' + image_path
-    
+
     # validate input 
     if (not path.exists(image_path)):
         raise HTTPException(400, detail="Invalid path")
 
-    image_types=['rgb','gif', 'pbm', 'pgm', 'ppm', 'tiff', 'rast', 'xbm', 'jpeg', 'bmp', 'png', 'webp', 'exr', 'jpg']
-    if(imghdr.what(image_path) not in image_types):
+    file_type = magic.from_file(image_path, mime=True)
+    if(file_type not in image_types):
         raise HTTPException(400, detail="Invalid document type")
         
     file_name = image_path.strip("/")[-1].strip(".")[0]

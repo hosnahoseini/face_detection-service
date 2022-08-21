@@ -8,3 +8,4 @@ opencv-python==4.6.0.66
 python-multipart==0.0.5
 pytest
 requests
+python-magic
