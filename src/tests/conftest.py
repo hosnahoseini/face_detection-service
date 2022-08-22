@@ -11,5 +11,5 @@ def test_app():
 
 @pytest.fixture(scope="module")
 def client():
-    with TestClient(api) as c:
+    with TestClient(app) as c:
         yield c

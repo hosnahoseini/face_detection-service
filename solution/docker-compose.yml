@@ -5,22 +5,38 @@ services:
   face-detection:
     env_file:
       - .env
-    
+
     build: 
       context: ../src/app
       dockerfile: Dockerfile
     command: bash -c 'sleep 1; python ./src/app/main.py'
     volumes:
       - ..:/app
-    ports:
-    - "5000:5000"
-    # scale: 2
+    expose: 
+      - 8000
+    scale: 2
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.face-detection.rule=Host(`0.0.0.0`)"
-      - "traefik.port=5000"
+      - "traefik.http.routers.fastapi1.rule=PathPrefix(`/face/v1`)"
+      - "traefik.port=8000"
     depends_on:
       - db 
+
+  app1:
+    env_file:
+      - .env
+    build: 
+      context: ../src/app1
+      dockerfile: Dockerfile
+    command: bash -c 'sleep 1; python ./src/app1/main.py'
+    volumes:
+      - ..:/app
+    expose: 
+      - 5000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fastapi2.rule=PathPrefix(`/text/v1`)"
+      - "traefik.port=5000"
 
   db:
     env_file:
@@ -40,6 +56,15 @@ services:
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=test_db
       - PYTHONPATH=/app
+
+  traefik:
+    image: traefik
+    ports:
+      - 8008:80
+      - 8081:8080
+    volumes:
+          - "./traefik.dev.toml:/etc/traefik/traefik.toml"
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   # nginx:
   #   image: nginx:latest
@@ -62,18 +87,6 @@ services:
   #   volumes:
   #     - pgadmin-data:/var/lib/pgadmin
     
-  reverse-proxy:
-    image: traefik
-    command: 
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--configFile=traefik.toml"
-    ports:
-      - "8080:80"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 volumes:
   db:
   pgadmin-data:
