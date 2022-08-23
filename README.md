@@ -133,7 +133,7 @@ Install docker and docker compose
 
 0. Clone the repo
    ```sh
-   git clone https://github.com/hosnahoseini/docker-test.git 
+   git clone https://github.com/hosnahoseini/face_detection-service.git 
    ```
 1. run 
    ```sh
