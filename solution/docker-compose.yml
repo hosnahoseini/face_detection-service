@@ -5,16 +5,15 @@ services:
   face-detection:
     env_file:
       - .env
-
     build: 
-      context: ../src/app
+      context: ../src/face
       dockerfile: Dockerfile
-    command: bash -c 'sleep 1; python ./src/app/main.py'
+    command: bash -c 'sleep 1; python ./src/face/main.py'
     volumes:
       - ..:/app
     expose: 
       - 8000
-    scale: 2
+    scale: ${SCALE}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fastapi1.rule=PathPrefix(`/face/v1`)"
@@ -26,9 +25,9 @@ services:
     env_file:
       - .env
     build: 
-      context: ../src/app1
+      context: ../src/text
       dockerfile: Dockerfile
-    command: bash -c 'sleep 1; python ./src/app1/main.py'
+    command: bash -c 'sleep 1; python ./src/text/main.py'
     volumes:
       - ..:/app
     expose: 
@@ -66,6 +65,18 @@ services:
           - "./traefik.dev.toml:/etc/traefik/traefik.toml"
           - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+  # to use ngnix as proxy uncomment this part  
   # nginx:
   #   image: nginx:latest
   #   volumes:
@@ -73,20 +84,8 @@ services:
   #   depends_on:
   #     - face-detection
   #   ports:
-  #     - "4000:4000"
+  #     - "8008:8008"
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin4_container
-  #   restart: always
-  #   ports:
-  #     - "5050:80"
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
-  #     PGADMIN_DEFAULT_PASSWORD: admin
-  #   volumes:
-  #     - pgadmin-data:/var/lib/pgadmin
-    
 volumes:
   db:
   pgadmin-data:

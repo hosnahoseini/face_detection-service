@@ -1,16 +1,9 @@
 
-from unittest import result
 from fastapi.testclient import TestClient
-from src.app import crud
-from src.app.main import app
-import pytest
+from src.face import crud
+from src.face.main import app
 
-def test_read_all_images():
-    with TestClient(app) as client:  
-        response = client.get("/images/")
-        assert response.status_code == 200
-        assert len(response.json()) == 20
-
+PREFIX = "/face/v1"
 
 def test_read_all_images(test_app, monkeypatch):
     with TestClient(app) as client:  
@@ -29,26 +22,26 @@ def test_read_all_images(test_app, monkeypatch):
 
         monkeypatch.setattr(crud, "get_all", mock_get_all)
 
-        response = client.get("/images/")
-        assert response.status_code == 200
+        response = client.get(PREFIX + "/read_all_images/")
         assert response.json() == test_data
+        assert response.status_code == 200
 
 def test_read_image():
     with TestClient(app) as client:  
-        response = client.get("/image/2/")
+        response = client.get(PREFIX + "/read_image/5/")
         assert response.status_code == 200
-        assert response.json() ==   {
-                                    "id": 2,
-                                    "name": "t2.jpeg",
-                                    "address": "/app/resources/output/t2_output.png",
-                                    "date": "2022-08-20",
-                                    "result": "[[1194, 264, 75, 75], [840, 270, 71, 71], [232, 310, 72, 72], [1011, 221, 73, 73], [392, 284, 80, 80], [1382, 278, 77, 77], [560, 219, 101, 101], [820, 496, 151, 151]]"
-                                }
+        assert response.json() ==     {
+                                        "id": 5,
+                                        "name": "t1.jpg",
+                                        "address": "/app/resources/output/t1_output.png",
+                                        "date": "2022-08-21",
+                                        "result": "[[1254, 216, 248, 248], [1001, 549, 277, 277], [787, 540, 302, 302], [248, 604, 331, 331]]"
+                                    }
     
 def test_put_image():
     with TestClient(app) as client:  
         
-        response = client.put("/image/3/", json={
+        response = client.put(PREFIX + "/update_image/3/", json={
                                                     "name": "boo",
                                                     "address": "foo",
                                                     "date": "2022-08-20",
@@ -63,34 +56,6 @@ def test_put_image():
 
                                     }
         assert response.status_code == 200
-
-# def test_create_image(test_app, monkeypatch):
-#     with TestClient(app) as client:  
-
-#         test_request_payload = {
-#                                 "name": "string",
-#                                 "address": "string",
-#                                 "date": "2022-08-17",
-#                                 "result": "[]"
-#                                 }
-#         test_response_payload = {
-#                                 "id":16,
-#                                 "name": "string",
-#                                 "address": "string",
-#                                 "date": "2022-08-17",
-#                                 "result": "[]"
-#                                 }
-
-#         async def mock_post(payload):
-#             return test_response_payload
-
-#         monkeypatch.setattr(crud, "post", mock_post)
-
-#         response = client.post("/image/", json=test_request_payload)
-
-        
-#         assert response.json() == test_response_payload
-#         assert response.status_code == 201
 
 def test_delete_image(monkeypatch):
     with TestClient(app) as client:  
@@ -113,7 +78,7 @@ def test_delete_image(monkeypatch):
 
         monkeypatch.setattr(crud, "delete", mock_delete)
 
-        response = client.delete("/image/5/")
+        response = client.delete(PREFIX + "/delete_image/5/")
         assert response.status_code == 200
         assert response.json() ==   {
                                         "id": 5,
@@ -132,7 +97,7 @@ def test_detect_address(test_app, monkeypatch):
 
         monkeypatch.setattr(crud, "post", mock_post)
 
-        response = client.get("/detect_with_path/%2Fresources%2Finput%2Ft1.jpg")
+        response = client.get(PREFIX + "/detect_with_path/%2Fresources%2Finput%2Ft1.jpg")
         
         expected = [
                     [
@@ -173,7 +138,7 @@ def test_detect_image_file(monkeypatch):
         monkeypatch.setattr(crud, "post", mock_post)  
 
         files = {'file': open("/app/resources/input/t1.jpg",'rb')}
-        response = client.post("/detect_with_image/", files=files)
+        response = client.post(PREFIX + "/detect_with_image/", files=files)
 
         expected = [
                     [
@@ -217,7 +182,7 @@ def test_result_array(monkeypatch):
                 }
 
         monkeypatch.setattr(crud, "get", mock_get)  
-        response = client.get("/array_result/2")
+        response = client.get(PREFIX + "/array_result/2")
         assert response.status_code == 200
         assert response.json() == "[[1194, 264, 75, 75], [840, 270, 71, 71], [232, 310, 72, 72], [1011, 221, 73, 73], [392, 284, 80, 80], [1382, 278, 77, 77], [560, 219, 101, 101], [820, 496, 151, 151]]"
 
@@ -231,7 +196,7 @@ def to_set(myList):
 ######################################### invalid tests ######################################
 
 def test_create_image_invalid_json(test_app):
-    response = test_app.post("/image/", json={"name": "something"})
+    response = test_app.post(PREFIX + "/create_image/", json={"name": "something"})
     assert response.status_code == 422
 
 def test_read_image_incorrect_id(test_app, monkeypatch):
@@ -240,7 +205,7 @@ def test_read_image_incorrect_id(test_app, monkeypatch):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.get("/image/999")
+    response = test_app.get(PREFIX + "/read_image/999")
     assert response.status_code == 404
     assert response.json()["detail"] == "Not Found"
 
@@ -250,27 +215,27 @@ def test_remove_image_incorrect_id(test_app, monkeypatch):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.delete("/image/999/")
+    response = test_app.delete(PREFIX + "/delete_image/999/")
     assert response.status_code == 404
     assert response.json()["detail"] == "Not Found"
     
 def test_detect_invalid_address():
     with TestClient(app) as client:  
-        response = client.get("/detect_with_path/%2Fresoes%2Finput%2Ft1.jpg")
+        response = client.get(PREFIX + "/detect_with_path/%2Fresoes%2Finput%2Ft1.jpg")
 
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid path"
 
 def test_detect_address_invalid_type_valid_extension():
     with TestClient(app) as client:  
-        response = client.get("/detect_with_path/%2Fresources%2Finput%2Fvideo.png")
+        response = client.get(PREFIX + "/detect_with_path/%2Fresources%2Finput%2Fvideo.png")
 
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid document type"
 
 def test_detect_address_invalid_type():
     with TestClient(app) as client:  
-        response = client.get("/detect_with_path/%2Fresources%2Finput%2Fvideo.mp4")
+        response = client.get(PREFIX + "/detect_with_path/%2Fresources%2Finput%2Fvideo.mp4")
 
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid document type"
@@ -279,7 +244,7 @@ def test_detect_image_file_invalid_type():
     with TestClient(app) as client:
 
         files = {'file': open("/app/resources/input/video.mp4",'rb')}
-        response = client.post("/detect_with_image/", files=files)
+        response = client.post(PREFIX + "/detect_with_image/", files=files)
         
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid document type"
@@ -288,7 +253,7 @@ def test_detect_image_file_invalid_type_valid_extension():
     with TestClient(app) as client:
 
         files = {'file': open("/app/resources/input/video.png",'rb')}
-        response = client.post("/detect_with_image/", files=files)
+        response = client.post(PREFIX + "/detect_with_image/", files=files)
         
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid document type"

@@ -1,7 +1,0 @@
-[entryPoints]
-  [entryPoints.http]
-    address = "0.0.0.0:8080"
-
-[providers]
-  [providers.file]
-    filename = "routes.toml"

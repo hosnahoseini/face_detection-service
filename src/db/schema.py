@@ -1,4 +1,3 @@
-# build a schema using pydantic
 from pydantic import BaseModel
 import datetime
 

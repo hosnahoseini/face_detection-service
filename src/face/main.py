@@ -1,7 +1,4 @@
-
-import imghdr
 import io
-import os
 from datetime import datetime
 from os import path
 from typing import List
@@ -10,20 +7,19 @@ import cv2
 import magic
 import numpy as np
 import uvicorn
-from fastapi import (APIRouter, FastAPI, File, HTTPException, Request,
-                     UploadFile)
+from fastapi import (FastAPI, File, HTTPException, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
-from src.app import api, crud
-from src.db.db import database, image_table
+from src.face import crud
+from src.db.db import database
 from src.db.schema import Image, ImageIn
 from starlette.responses import StreamingResponse
 
 PREFIX = "/face/v1"
+PATH = "/app"
 image_types = ["image/apng", "image/webp", "image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml"]
 
 
-PATH = "/app"
-app = FastAPI(title = "Face Detection", docs_url=PREFIX + "/docs")
+app = FastAPI(title = "Face Detection", docs_url=PREFIX + "/docs", openapi_url= PREFIX + '/openapi.json' )
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,18 +38,6 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
-
-@app.get("/face/v1/")
-def read_main():
-    return {"message": "Hello World"}
-
-    
-PREFIX = "/face/v1"
-
-@app.get(PREFIX + "/images/", response_model=List[Image])
-async def read_all_images():
-    return await crud.get_all()
-
 
 def detect(image, name):
     # convert image to grayscale
@@ -100,6 +84,30 @@ async def detect_with_file(file: UploadFile = File(...)):
 
     return faces
 
+@app.get(PREFIX + "/detect_with_path/{image_path:path}")
+
+async def detect_with_path(image_path):
+    image_path = PATH + '/' + image_path
+
+    # validate input 
+    if (not path.exists(image_path)):
+        raise HTTPException(400, detail="Invalid path")
+
+    file_type = magic.from_file(image_path, mime=True)
+
+    if(file_type not in image_types):
+        raise HTTPException(400, detail="Invalid document type")
+        
+    file_name = image_path.strip(PREFIX + "/")[-1].strip(".")[0]
+    image = cv2.imread(image_path)
+
+    add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
+    faces = detect(image, file_name)
+
+    payload = ImageIn(name=file_name, address=add, date=datetime.now(), result=str(faces))
+    await crud.post(payload)
+    return faces
+
 @app.get(PREFIX + "/image_result/{id:int}")
 async def get_result(id: int):
     # Returns a cv2 image array from the document vector
@@ -128,30 +136,8 @@ async def get_result(id: int):
     res, im_png = cv2.imencode(".png", cv2img)
     return result["result"]
 
-@app.get(PREFIX + "/detect_with_path/{image_path:path}")
 
-async def detect_with_path(image_path):
-    image_path = PATH + '/' + image_path
-
-    # validate input 
-    if (not path.exists(image_path)):
-        raise HTTPException(400, detail="Invalid path")
-
-    file_type = magic.from_file(image_path, mime=True)
-    if(file_type not in image_types):
-        raise HTTPException(400, detail="Invalid document type")
-        
-    file_name = image_path.strip(PREFIX + "/")[-1].strip(".")[0]
-    image = cv2.imread(image_path)
-
-    add = PATH + f'/resources/output/{file_name.split(".")[0]}_output.png'
-    faces = detect(image, file_name)
-
-    payload = ImageIn(name=file_name, address=add, date=datetime.now(), result=str(faces))
-    await crud.post(payload)
-    return faces
-
-@app.post(PREFIX + "/image/", response_model=Image, status_code=201)
+@app.post(PREFIX + "/create_image/", response_model=Image, status_code=201)
 async def create_image(payload: ImageIn):
     id = await crud.post(payload)
 
@@ -164,7 +150,7 @@ async def create_image(payload: ImageIn):
     }
     return response_object
 
-@app.get(PREFIX + "/image/{id}/", response_model=Image)
+@app.get(PREFIX + "/read_image/{id}/", response_model=Image)
 async def read_image(id: int):
     image = await crud.get(id)
     if not image:
@@ -172,11 +158,11 @@ async def read_image(id: int):
     return image
 
     
-@app.get(PREFIX + "/images/", response_model=List[Image])
+@app.get(PREFIX + "/read_all_images/", response_model=List[Image])
 async def read_all_images():
     return await crud.get_all()
 
-@app.put(PREFIX + "/image/{id}/", response_model=Image)
+@app.put(PREFIX + "/update_image/{id}/", response_model=Image)
 async def update_image(id: int, payload: ImageIn):
     image = await crud.get(id)
     if not image:
@@ -193,7 +179,7 @@ async def update_image(id: int, payload: ImageIn):
     }
     return response_object
 
-@app.delete(PREFIX + "/image/{id}/", response_model=Image)
+@app.delete(PREFIX + "/delete_image/{id}/", response_model=Image)
 async def delete_image(id: int):
     image = await crud.get(id)
     if not image:
@@ -202,10 +188,6 @@ async def delete_image(id: int):
     await crud.delete(id)
 
     return image
-
-@app.get(PREFIX + "/count_word/{text}")
-def read_main(text: str):
-    return len(text.split(" "))
      
 if __name__ == '__main__':
-    uvicorn.run("src.app.main:app",host='0.0.0.0', port=8000, reload=True, debug=True)
+    uvicorn.run("src.face.main:app",host='0.0.0.0', port=8000, reload=True, debug=True)

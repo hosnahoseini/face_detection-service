@@ -1,5 +1,4 @@
-from unittest import result
-from src.db.schema import ImageIn, Image
+from src.db.schema import ImageIn
 from src.db.db import image_table, database
 
 async def get(id: int):
