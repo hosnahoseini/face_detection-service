@@ -1,7 +1,7 @@
 import pytest
 from starlette.testclient import TestClient
 
-from src.app.main import app
+from src.face.main import app
 
 
 @pytest.fixture(scope="module")
@@ -11,5 +11,5 @@ def test_app():
 
 @pytest.fixture(scope="module")
 def client():
-    with TestClient(api) as c:
+    with TestClient(app) as c:
         yield c
